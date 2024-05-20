@@ -36,7 +36,7 @@ const verifyToken = async (req, res, next) => {
   })
 }
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@main.mq0mae1.mongodb.net/?retryWrites=true&w=majority&appName=Main`
+const uri = "mongodb+srv://stayVista:qp7UHbC1dOLvS0jT@cluster0.vq4rqer.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -47,6 +47,36 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    // COLLECTION:
+    const roomsCollection = client.db('stayVista').collection('rooms')
+
+
+
+
+
+    // get all rooms from db
+    app.get('/rooms', async (req, res) => {
+      const category = req.query.category;
+      let query = {}
+      if(category && category !=='null') query = {category:category}
+      const result = await roomsCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // get single data by id:
+    app.get('/room/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await roomsCollection.findOne(query)
+      res.send(result)
+      
+    })
+
+
+
+
+
+
     // auth related api
     app.post('/jwt', async (req, res) => {
       const user = req.body
@@ -78,7 +108,7 @@ async function run() {
     })
 
     // Send a ping to confirm a successful connection
-    await client.db('admin').command({ ping: 1 })
+    // await client.db('admin').command({ ping: 1 })
     console.log(
       'Pinged your deployment. You successfully connected to MongoDB!'
     )
