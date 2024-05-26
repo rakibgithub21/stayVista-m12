@@ -3,7 +3,7 @@ const app = express()
 require('dotenv').config()
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
+const { MongoClient, ServerApiVersion, ObjectId, Timestamp } = require('mongodb')
 const jwt = require('jsonwebtoken')
 
 const port = process.env.PORT || 8000
@@ -49,6 +49,7 @@ async function run() {
   try {
     // COLLECTION:
     const roomsCollection = client.db('stayVista').collection('rooms')
+    const usersCollection = client.db('stayVista').collection('users')
 
 
 
@@ -58,10 +59,36 @@ async function run() {
     app.get('/rooms', async (req, res) => {
       const category = req.query.category;
       let query = {}
-      if(category && category !=='null') query = {category:category}
+      if (category && category !== 'null') query = { category: category }
       const result = await roomsCollection.find(query).toArray()
       res.send(result)
     })
+
+    //save a room data in db
+    app.post('/room', async (req, res) => {
+      const roomData = req.body;
+      const result = await roomsCollection.insertOne(roomData)
+      res.send(result)
+    })
+
+
+    //get all rooms for host:
+    app.get('/my-listings/:email', async (req, res) => {
+      const email = req.params.email
+      let query = { 'host.email': email }
+
+      const result = await roomsCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // delete a room
+    app.delete('/room/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await roomsCollection.deleteOne(query)
+      res.send(result)
+    })
+
 
     // get single data by id:
     app.get('/room/:id', async (req, res) => {
@@ -69,7 +96,7 @@ async function run() {
       const query = { _id: new ObjectId(id) }
       const result = await roomsCollection.findOne(query)
       res.send(result)
-      
+
     })
 
 
@@ -105,6 +132,50 @@ async function run() {
       } catch (err) {
         res.status(500).send(err)
       }
+    })
+
+    // save a user
+    app.put('/user', async (req, res) => {
+      const user = req.body;
+      const query = { email: user?.email }
+      // check if user already exists in db
+
+      const isExists = await usersCollection.findOne(query)
+
+
+      if (isExists) {
+        if (user.status === 'Requested') {
+          const result = await usersCollection.updateOne(query, {
+            $set: {
+              status:user?.status
+            }
+          })
+          res.send(result)
+        } else {
+          return res.send(isExists)
+        }
+      } 
+
+      // save user for the first time
+      const options = { upsert: true }
+
+      const updateDoc = {
+        $set: {
+          ...user,
+          timestamp: Date.now()
+
+        }
+      }
+      const result = await usersCollection.updateOne(query, updateDoc, options)
+      res.send(result)
+
+
+    })
+
+    // get all users form db
+    app.get('/users', async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result)
     })
 
     // Send a ping to confirm a successful connection

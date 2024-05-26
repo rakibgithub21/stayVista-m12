@@ -4,10 +4,47 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useAuth from '../../../hooks/useAuth'
 import avatarImg from '../../../assets/images/placeholder.jpg'
+import HostModal from '../../Modal/HostModal'
+
+import useAxiosSecure from '../../../hooks/useAxiosSecure'
+import toast from 'react-hot-toast'
 
 const Navbar = () => {
+  const axiosSecure = useAxiosSecure()
+
   const { user, logOut } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+
+  // for modal
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+  }
+
+  const modalHandler = async () => {
+   
+    try {
+      const currentUser = {
+        email: user?.email,
+        role: 'guest',
+        status: 'Requested'
+      }
+      const { data } = await axiosSecure.put('http://localhost:8000/user', currentUser)
+      console.log(data);
+      if (data.modifiedCount > 0) {
+        toast.success('Success!, Please wait for admin confirmation')
+      } else {
+        toast.success('Please!, Wait for admin approval👍')
+      }
+     
+    } catch (error) {
+      toast.error(error.message)
+      console.log(error);
+    } finally {
+      closeModal()
+    }
+  }
 
   return (
     <div className='fixed w-full bg-white z-10 shadow-sm'>
@@ -29,15 +66,18 @@ const Navbar = () => {
               <div className='flex flex-row items-center gap-3'>
                 {/* Become A Host btn */}
                 <div className='hidden md:block'>
-                  {!user && (
+                  {/* {!user && ( */}
                     <button
-                      disabled={!user}
+                      onClick={()=>setIsModalOpen(true)}
+                      // disabled={!user}
                       className='disabled:cursor-not-allowed cursor-pointer hover:bg-neutral-100 py-3 px-4 text-sm font-semibold rounded-full  transition'
                     >
                       Host your home
                     </button>
-                  )}
+                  {/* )} */}
                 </div>
+                {/* modal */}
+                <HostModal isOpen={isModalOpen} modalHandler={modalHandler} closeModal={closeModal}></HostModal>
                 {/* Dropdown btn */}
                 <div
                   onClick={() => setIsOpen(!isOpen)}
@@ -69,6 +109,12 @@ const Navbar = () => {
 
                     {user ? (
                       <>
+                        <Link
+                          to='/dashboard'
+                          className='block  px-4 py-3 hover:bg-neutral-100 transition font-semibold'
+                        >
+                          Dashboard
+                        </Link>
                         <div
                           onClick={logOut}
                           className='px-4 py-3 hover:bg-neutral-100 transition font-semibold cursor-pointer'
